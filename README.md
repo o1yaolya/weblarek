@@ -6,6 +6,7 @@
 - src/ — исходные файлы проекта
 - src/components/ — папка с JS компонентами
 - src/components/base/ — папка с базовым кодом
+- src/components/models/ - папка для классов-моделей данных
 
 Важные файлы:
 - index.html — HTML-файл главной страницы
@@ -98,3 +99,78 @@ Presenter - презентер содержит основную логику п
 `emit<T extends object>(event: string, data?: T): void` - инициализация события. При вызове события в метод передается название события и объект с данными, который будет использован как аргумент для вызова обработчика.  
 `trigger<T extends object>(event: string, context?: Partial<T>): (data: T) => void` - возвращает функцию, при вызове которой инициализируется требуемое в параметрах событие с передачей в него данных из второго параметра.
 
+##### Данные
+
+
+Товар:
+
+interface IProduct {
+  id: string - уникальный идентификатор;
+  description: string - описание;
+  image: string - изображение товара;
+  title: string - название;
+  category: string - категория;
+  price: number | null - стоимость;
+} 
+
+Покупатель:
+
+interface IBuyer {
+  payment: TPayment - способ оплаты;
+  email: string - почта покупателя;
+  phone: string - телефон покупателя;
+  address: string - адрес доставки;
+} 
+
+###### Модели данных
+
+Product Каталог товаров:
+       
+  Поля:
+private items: IProduct[] — массив всех товаров каталога;
+private selectedItems: IProduct | null — товар, выбранный для детального отображения (может быть null, если товар не выбран).
+
+  Содержит методы:
+   setItems(items: IProduct[]): void - сохранение массива товаров полученного в параметрах метода; 
+   getItems():  IProduct[] - получение массива товаров из модели; 
+   getItemsById(id: string): IProduct | undefined - получение одного товара по его id; 
+   setSelectedItems(product: IProduct): void - сохранение товара для подробного отображения; 
+   getSelectedItems(): IProduct | null - получение товара для подробного отображения.
+
+
+Busket Корзина:
+  Поля:
+private items: IProduct[] - хранит массив товаров, выбранных покупателем для покупки. 
+
+  Содержит методы:
+   getItems(): IProduct[] - получение массива товаров, которые находятся в корзине; 
+   addItem(items: IProduct): void - добавление товара, который был получен в параметре, в массив корзины; 
+   deleteItem(items: IProduct): void - удаление товара, полученного в параметре из массива корзины; 
+   clear(): void - очистка корзины; 
+   getTotalPrice(): number - получение стоимости всех товаров в корзине; 
+   getItemCount(): number - получение количества товаров в корзине; 
+   hasItem(id: string): boolean - проверка наличия товара в корзине по его id, полученного в параметр метода.
+
+
+
+ Buyer Покупатель:
+ Поля:
+  хранят следующие данные:
+  private payment - вид оплаты; 
+  private address - адреc; 
+  private phone - телефон; 
+  private email - email.
+
+  Содержит методы:
+  updateData(data: Partial<IBuyer>): void - Общий метод обновления (частичное обновление) сохранение данных в модели. 
+
+   getData(): IBuyer - получение всех данных покупателя; 
+   clearData(): void - очистка данных покупателя; 
+   validate(): ValidationResult -валидация данных. 
+
+###### Слой коммуникации
+Класс ServerAPI отправляет на сервер данные о покупателе и выбранных товарах.
+
+Методы:
+getProducts(): Promise<IProduct[]>  метод get - делает запрос на эндпоинт /product/ и возвращает массив товаров
+order(data: IOrderRequest): Promise<IOrderResponse>  метод post - делает запрос на эндпоинт /order/ и передаёт в него данные, полученные в параметрах метода
