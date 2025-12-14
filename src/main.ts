@@ -55,9 +55,9 @@ console.log("Массив товаров в корзине:", basketModel.getIte
 
 ///////////Buyer
 
-const BuyerModel = new Buyer();
+const buyerModel = new Buyer();
 
-BuyerModel.updateData({
+buyerModel.updateData({
   payment: "cash",
   email: "",
   phone: "+7 999 999-99-99",
@@ -74,10 +74,10 @@ const updatedFields = Object.keys({
 console.log("Обновлены поля:", updatedFields);
 
 // Проверяем текущее состояние
-console.log("Текущие данные:", BuyerModel.getData());
+console.log("Текущие данные:", buyerModel.getData());
 
 // Валидация данных
-const result = BuyerModel.validate();
+const result = buyerModel.validate();
 
 if (Object.keys(result).length > 0) {
   console.log("Ошибки валидации:");
@@ -91,8 +91,8 @@ if (Object.keys(result).length > 0) {
 }
 
 // Очистка данных покупателя
-BuyerModel.clearData();
-console.log("Данные покупателя после очистки:", BuyerModel.getData());
+buyerModel.clearData();
+console.log("Данные покупателя после очистки:", buyerModel.getData());
 
 //////API
 
@@ -103,16 +103,23 @@ const serverApi = new ServerApi(api);
 // 2. Создаём модель для хранения каталога товаров
 const catalog = new Product();
 
-// 3. Получение товаров
-const products = await serverApi.getProducts();
+// 3. Получение товаров и cохранение массива в модели данных
+async function initCatalog() {
+  try {
+    const products = await serverApi.getProducts(); // Получение списка товаров
+    catalog.setItems(products); // Передаём готовый массив
+    console.log("Список товаров:", products);
 
-// 4. Сохранение массива в модели данных
-catalog.setItems(products);
-console.log("Список товаров:", products);
+    // Вывод списка товаров
+    catalog.getItems().forEach((product, index) => {
+      console.log(
+        `${index + 1}. ${product.title} ` +
+          `(ID: ${product.id}, цена: ${product.price ?? "нет цены"} руб.)`
+      );
+    });
+  } catch (error) {
+    console.error('Ошибка при получении списка товаров:', error);
+  }
+}
 
-catalog.getItems().forEach((product, index) => {
-  console.log(
-    `${index + 1}. ${product.title} ` +
-      `(ID: ${product.id}, цена: ${product.price ?? "нет цены"} руб.)`
-  );
-});
+initCatalog();
