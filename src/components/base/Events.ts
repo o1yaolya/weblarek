@@ -9,8 +9,8 @@ type EmitterEvent = {
 
 export interface IEvents {
     on<T extends object>(event: EventName, callback: (data: T) => void): void;
+     off(event: AppEvent, callback: Function): void;
     emit<T extends object>(event: string, data?: T): void;
-    trigger<T extends object>(event: string, context?: Partial<T>): (data: T) => void;
 }
 
 /**
@@ -87,5 +87,57 @@ export class EventEmitter implements IEvents {
             });
         };
     }
+}
+
+export enum AppEvent {
+  // События корзины
+  BasketOpen = 'basket:open', // Открытие корзины
+  BasketUpdate = 'basket:update', // Обновление содержимого корзины
+  BasketOrder = 'basket:order', // Нажатие «Оформить заказ»
+  BasketItemDelete = 'basket:item:delete', // Удаление товара из корзины
+  BasketCheckoutStep2 = 'basket:checkout:step2', // Нажатие кнопки перехода ко 2-й форме оформления заказа
+  BasketPayment = 'basket:payment', // Нажатие кнопки оплаты/завершения оформления заказа
+  BasketFormChange = 'basket:form:change', // Изменение данных в формах оформления заказа
+
+  // События модальных окон
+  ModalOpen = 'modal:open',
+  ModalClose = 'modal:close',
+
+  // События карточек товаров
+  CardClick = 'card:click', // Клик по карточке товара
+  CardAddToBasket = 'card:add-to-basket', // Добавление товара в корзину через карточку
+  CardPriceChange = 'card:price:change', // Изменение цены товара
+  CardDataUpdate = 'card:data:update', // Обновление данных карточки
+  ProductSelect = 'product:select',
+
+  // События галереи/каталога
+  GalleryUpdated = 'gallery:updated', // Обновление списка товаров в галерее
+  CatalogChange = 'catalog:change', // Изменение каталога (перезагрузка)
+
+  // События модели данных покупателя
+  BuyerDataUpdate = 'buyer:data:update', // Изменение данных покупателя
+
+  // События оформления заказа (дополнительные)
+  OrderSuccess = 'order:success', // Успешное оформление заказа
+  OrderComplete = 'order:complete',
+  OrderError = 'order:error', // Ошибка при оформлении заказа
+
+  // События интерфейса
+  HeaderCounterUpdate = 'header:counter:update', // Обновление счётчика товаров в шапке
+  ShowCheckoutForm = 'checkout:form:show', // Показать форму оформления заказа
+
+  //ajhvs
+  FormSubmit = 'form:submit',
+  InputChange = 'input:change',
+  FormStep1Submit = 'form:step1:submit',  
+  FormStep2Submit = 'form:step2:submit',
+}
+
+
+// Интерфейс для системы событий
+export interface IEvents {
+  emit(event: string | AppEvent, data?: unknown): void;
+  on(event: string | AppEvent, callback: (data?: unknown) => void): void;
+  off(event: string | AppEvent, handler: (data?: unknown) => void): void;
 }
 

@@ -39,6 +39,8 @@ export interface IOrderRequest {
 
 export interface IOrderItem {
   id: string;      // ID товара
+  title: string;        // Название товара
+  price: number;        // Цена товара
   quantity: number; // Количество
 }
 
@@ -57,4 +59,14 @@ export interface IOrderResponse {
 export interface GetProductsResponse {
   title: string;
   items: IProduct[]; // именно здесь лежат товары
+}
+
+export interface IOrderFormStep1Data {
+  paymentMethod: 'online' | 'cash';
+  deliveryAddress: string;
+}
+
+export interface IOrderFormStep2Data {
+  email: string;
+  phone: string;
 }
