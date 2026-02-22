@@ -30,8 +30,8 @@ export interface IBuyer {
 //Данные заказа для отправки на сервер
 export interface IOrderRequest {
   payment: TPayment,
-  email: string,
-  phone: string;
+  email?: string,
+  phone?: string;
   address: string;
   total: number;
   items: IOrderItem[];
@@ -39,8 +39,6 @@ export interface IOrderRequest {
 
 export interface IOrderItem {
   id: string;      // ID товара
-  title: string;        // Название товара
-  price: number;        // Цена товара
   quantity: number; // Количество
 }
 
@@ -62,11 +60,9 @@ export interface GetProductsResponse {
 }
 
 export interface IOrderFormStep1Data {
-  paymentMethod: 'online' | 'cash';
+  paymentMethod: 'card' | 'cash';
   deliveryAddress: string;
-}
-
-export interface IOrderFormStep2Data {
   email: string;
   phone: string;
 }
+

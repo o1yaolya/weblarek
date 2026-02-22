@@ -2,13 +2,12 @@ import { Component } from "../../base/Component";
 import { ensureElement } from "../../../utils/utils";
 import { AppEvent } from "../../base/Events";
 import { IEvents } from '../../base/Events';
-import { API_URL } from "../../../utils/constants";
 import { CDN_URL } from "../../../utils/constants";
-import { Product } from "../../models/product";
 import { categoryMap } from "../../../utils/constants";
 // Тип данных карточки
 export type CardData = {
   title: string;
+   id: string; 
   price: number | string | null;
   imageSrc: string;
   category: string;
@@ -20,7 +19,7 @@ export type CardData = {
 
 
 export class Card extends Component<CardData> {
-  
+  public element: HTMLElement;
   // Поля класса — ссылки на DOM-элементы карточки
   protected titleElement: HTMLElement | null = null; // элемент с названием товара
   protected priceElement: HTMLElement | null = null; // элемент с ценой товара (или без цены)
@@ -36,7 +35,8 @@ export class Card extends Component<CardData> {
     super(container);
      this.data = {} as CardData;
     this.initElements();
-    this.bindEvents();
+    
+    this.element = container; 
   }
 protected initElements(): void {
     try {
@@ -60,14 +60,15 @@ protected initElements(): void {
    * В данном случае подписываемся на клик по кнопке карточки.
    */
 private bindEvents(): void {
-  const button = this.buttonElement;
-  if (button) {
-    button.addEventListener('click', () => {
-      if (!button.disabled) {
-        this.events.emit(AppEvent.CardClick, { data: this.data });
-      }
-    });
-  }
+  // Приводим тип контейнера к HTMLButtonElement
+  const buttonContainer = this.container as HTMLButtonElement;
+
+  buttonContainer.addEventListener('click', () => {
+    // Теперь TypeScript знает, что у buttonContainer есть свойство disabled
+    if (!buttonContainer.disabled) {
+      this.events.emit(AppEvent.CardClick, { id: this.data.id });
+    }
+  });
 }
 
 
@@ -78,10 +79,19 @@ private bindEvents(): void {
 render(data?: Partial<CardData>): HTMLElement {
     super.render(data);
 
+     // Сначала ОБЯЗАТЕЛЬНО заполняем ID, если он есть в данных
+  if (data?.id !== undefined) {
+    this.data.id = data.id;
+  } else {
+    console.error('Попытка рендера карточки без ID!', data);
+    return this.container;
+  }
     if (data?.title !== undefined) this.setTitle(data.title);
     if (data?.price !== undefined) this.setPrice(data.price);
     if (data?.imageSrc !== undefined) this.setImageSrc(data.imageSrc);
     if (data?.category !== undefined) this.setCategory(data.category);
+    
+    this.bindEvents();
 
     return this.container;
   }
@@ -206,4 +216,5 @@ protected setCategory(category: string): void {
     });
     this.container.dispatchEvent(event);
   }
+
 }

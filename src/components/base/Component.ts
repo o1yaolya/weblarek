@@ -23,4 +23,7 @@ export abstract class Component<T> {
         Object.assign(this as object, data ?? {});
         return this.container;
     }
+     getContainer(): HTMLElement {
+    return this.container;
+  }
 }

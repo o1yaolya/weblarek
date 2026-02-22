@@ -1,5 +1,4 @@
-// Хорошая практика даже простые типы выносить в алиасы
-// Зато когда захотите поменять это достаточно сделать в одном месте
+
 type EventName = string | RegExp;
 type Subscriber = Function;
 type EmitterEvent = {
@@ -90,9 +89,9 @@ export class EventEmitter implements IEvents {
 }
 
 export enum AppEvent {
-  // События корзины
+  // События корзины -уд.
   BasketOpen = 'basket:open', // Открытие корзины
-  BasketUpdate = 'basket:update', // Обновление содержимого корзины
+  BasketUpdate = 'basket:update', // Обновление содержимого корзины +
   BasketOrder = 'basket:order', // Нажатие «Оформить заказ»
   BasketItemDelete = 'basket:item:delete', // Удаление товара из корзины
   BasketCheckoutStep2 = 'basket:checkout:step2', // Нажатие кнопки перехода ко 2-й форме оформления заказа
@@ -112,7 +111,7 @@ export enum AppEvent {
 
   // События галереи/каталога
   GalleryUpdated = 'gallery:updated', // Обновление списка товаров в галерее
-  CatalogChange = 'catalog:change', // Изменение каталога (перезагрузка)
+  CatalogChange = 'catalog:change', // Изменение каталога (перезагрузка)+
 
   // События модели данных покупателя
   BuyerDataUpdate = 'buyer:data:update', // Изменение данных покупателя
@@ -121,16 +120,20 @@ export enum AppEvent {
   OrderSuccess = 'order:success', // Успешное оформление заказа
   OrderComplete = 'order:complete',
   OrderError = 'order:error', // Ошибка при оформлении заказа
-
+  ContactSubmit = 'contact-submit', //+
   // События интерфейса
   HeaderCounterUpdate = 'header:counter:update', // Обновление счётчика товаров в шапке
   ShowCheckoutForm = 'checkout:form:show', // Показать форму оформления заказа
 
   //ajhvs
   FormSubmit = 'form:submit',
+  FormValidation = 'form:validation', //+
   InputChange = 'input:change',
   FormStep1Submit = 'form:step1:submit',  
   FormStep2Submit = 'form:step2:submit',
+
+  //успешное окно
+  SuccessClose = 'success:closed',
 }
 
 
