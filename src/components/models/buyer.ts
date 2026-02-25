@@ -8,6 +8,24 @@ export class Buyer {
   private phone: string = '';
   private email: string = '';
 
+
+  // Сеттеры для отдельных полей
+  setPayment(payment: TPayment): void {
+    this.payment = payment;
+  }
+
+  setAddress(address: string): void {
+    this.address = address;
+  }
+
+  setEmail(email: string): void {
+    this.email = email;
+  }
+
+  setPhone(phone: string): void {
+    this.phone = phone;
+  }
+  
   // Общий метод обновления (частичное обновление)
   updateData(data: Partial<IBuyer>): void {
     if (data.payment !== undefined) this.payment = data.payment;

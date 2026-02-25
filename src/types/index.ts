@@ -34,17 +34,17 @@ export interface IOrderRequest {
   phone?: string;
   address: string;
   total: number;
-  items: IOrderItem[];
+  items: string[];
 }
 
 export interface IOrderItem {
   id: string;      // ID товара
-  quantity: number; // Количество
+  quantity?: number; // Количество
 }
 
 // Ответ API со списком товаров
 export interface IProductResponse {
-  id: string;
+  items: IProduct[];  
   total: number;
 }
 
@@ -59,10 +59,12 @@ export interface GetProductsResponse {
   items: IProduct[]; // именно здесь лежат товары
 }
 
-export interface IOrderFormStep1Data {
-  paymentMethod: 'card' | 'cash';
-  deliveryAddress: string;
+export interface IOrderData {
+  payment: 'card' | 'cash';
   email: string;
   phone: string;
+  address: string;
+  items: string[];
+  total: number;
 }
 

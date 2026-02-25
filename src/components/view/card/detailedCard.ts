@@ -1,126 +1,86 @@
-import { Card, CardData } from "./card";
+import { Card } from "./card";
 import { ensureElement } from "../../../utils/utils";
-import { IEvents } from "../../base/Events";
 import { CDN_URL } from "../../../utils/constants";
+import { IProduct } from "../../../types";
+import { categoryMap } from "../../../utils/constants";
 
-export type DetailedCardData = CardData & {
+export type DetailedCardData = Card<IProduct> & {
   description: string | null;
   image?: string | null;
   category?: string | null;
 };
 
-export class DetailedCard extends Card {
-  protected descriptionElement: HTMLElement | null = null;
-  private onAddToBasketCallback: (() => void) | null = null; // Храним колбэк
 
-  constructor(container: HTMLElement, events: IEvents) {
-    super(container, events);
-    this.initDetailedElements();
-    this.initButtonHandler(); // Инициализируем обработчик сразу после поиска элементов
+export class DetailedCard extends Card<IProduct> {
+  protected descriptionElement: HTMLElement | null = null; // элемент с описанием
+  protected imageElement: HTMLImageElement; // элемент изображения товара
+  protected categoryElement: HTMLElement; // элемент с категорией товара
+  protected buttonElement: HTMLButtonElement; // кнопка действия 
+
+  constructor(container: HTMLElement, actions?: { onClick: () => void }) {
+    super(container);
+
+    this.descriptionElement = ensureElement<HTMLElement>(
+      '.card__text',
+      this.container
+    );
+
+    this.imageElement = ensureElement<HTMLImageElement>(
+      '.card__image',
+      this.container
+    );
+    this.categoryElement = ensureElement<HTMLElement>(
+      '.card__category',
+      this.container
+    );
+
+    this.buttonElement = this.container.querySelector('.card__button') as HTMLButtonElement;
+
+    // Проверяем, что кнопка существует И есть обработчик
+  if (this.buttonElement && actions?.onClick) {
+    this.buttonElement.addEventListener('click', actions.onClick);
+  }
   }
 
-  private initDetailedElements(): void {
-    try {
-      this.imageElement = ensureElement(".card__image", this.container) as HTMLImageElement;
-      this.categoryElement = ensureElement(".card__category", this.container);
-      this.titleElement = ensureElement(".card__title", this.container);
-      this.descriptionElement = ensureElement(".card__text", this.container);
-      this.buttonElement = ensureElement(".card__button", this.container) as HTMLButtonElement;
-      this.priceElement = ensureElement(".card__price", this.container);
-    } catch (error) {
-      console.error("Ошибка при поиске элементов детальной карточки:", error);
-    }
+  set description(value: string | null) {
+    if (!this.descriptionElement) return;
+    this.descriptionElement.textContent = value || 'Описание отсутствует';
   }
 
-  // Инициализация обработчика кнопки — вызывается один раз при создании
-  private initButtonHandler(): void {
-    if (!this.buttonElement) {
-      console.warn("Кнопка не найдена, обработчик не установлен");
-      return;
-    }
+  // Сеттер для источника изображения
+     set image(value: string) {
+  if (!this.imageElement) return;
 
-    // Удаляем предыдущие обработчики через клонирование
-    const newButton = this.buttonElement.cloneNode(true) as HTMLButtonElement;
-    this.buttonElement.replaceWith(newButton);
-    this.buttonElement = newButton;
-
-    // Устанавливаем обработчик, который вызывает сохранённый колбэк
-    this.buttonElement.addEventListener("click", () => {
-      if (this.onAddToBasketCallback) {
-        this.onAddToBasketCallback();
-      }
-    });
+  if (value && value.trim() !== '') {
+    this.setImage(this.imageElement, CDN_URL + value, value);
+  } else {
+    // Изображение‑заглушка
+    this.imageElement.src = '/images/no-image.jpg';
+    this.imageElement.alt = 'Изображение отсутствует';
   }
+}
 
-  public fillDetails(data: Partial<DetailedCardData>): void {
-    // 1. Обрабатываем изображение
-    const img = this.imageElement;
-    if (img) {
-      console.log('Попытка загрузить изображение:', `${CDN_URL}${data.image}`);
-      img.onerror = () => {
-        img.src = `${CDN_URL}images/placeholder.svg`;
-        img.alt = 'Изображение недоступно';
-      };
-      this.setImageSrc(data.image || null, data.title || 'Изображение товара');
-    }
 
-    // 2. Категория
-    if (this.categoryElement) {
-      this.categoryElement.textContent = data.category || 'другое';
-    }
+  // Сеттер для категории
+  set category(value: string) {
+    if (!this.categoryElement) return;
 
-    // 3. Заголовок
-    if (this.titleElement) {
-      this.titleElement.textContent = data.title || 'Без названия';
-    }
+    this.categoryElement.textContent = value;
+    this.categoryElement.className = 'card__category';
 
-    // 4. Описание
-    if (this.descriptionElement) {
-      this.descriptionElement.textContent = data.description || 'Описание отсутствует';
-    }
-
-    // 5. Цена
-    if (this.priceElement) {
-      if (data.price != null && !isNaN(Number(data.price))) {
-        this.priceElement.textContent = `${data.price} синапсов`;
-      } else {
-        this.priceElement.textContent = "Бесценно";
-      }
+    const categoryClass = categoryMap[value as keyof typeof categoryMap];
+    if (categoryClass) {
+      this.categoryElement.classList.add(categoryClass);
     }
   }
-
-  public updateButtonState(isInBasket: boolean): void {
-    if (!this.buttonElement) {
-      console.warn("Кнопка не найдена в DetailedCard");
-      return;
+  // 
+  set buttonText(value: string) {
+        this.buttonElement.textContent = value;
     }
 
-    // Регистронезависимая проверка цены
-    const priceText = this.priceElement?.textContent?.toLowerCase() || '';
-    if (!this.priceElement || priceText.includes("бесценно")) {
-      this.buttonElement.textContent = "Недоступно";
-      this.buttonElement.disabled = true;
-      return;
-    }
+  //
+     set buttonDisabled(state: boolean) {
+    this.buttonElement.disabled = state;
+}
 
-    if (isInBasket) {
-      this.buttonElement.textContent = "Удалить из корзины";
-      this.buttonElement.disabled = false;
-    } else {
-      this.buttonElement.textContent = "Купить";
-      this.buttonElement.disabled = false;
-    }
-
-    console.log('Кнопка обновлена:', {
-      text: this.buttonElement.textContent,
-      disabled: this.buttonElement.disabled
-    });
-  }
-
-  // Устанавливает колбэк для кнопки — Presenter передаёт логику
-  public setOnAddToBasket(handler: () => void): void {
-    this.onAddToBasketCallback = handler;
-    // При установке нового колбэка обновляем обработчик
-    this.initButtonHandler();
-  }
 }

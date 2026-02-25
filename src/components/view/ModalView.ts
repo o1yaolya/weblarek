@@ -64,9 +64,6 @@ export class Modal extends Component<IModal> {
   this.content = null; // Сброс ссылки на контент
 }
 
- public setContent(content: HTMLElement): void {
-    this.content = content;
-  }
   // сеттер установки контента модального окна
  set content(element: HTMLElement | null) {
   if (element === null) {

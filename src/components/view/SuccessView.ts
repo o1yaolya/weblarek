@@ -1,31 +1,29 @@
 import { Component } from "../base/Component";
-import { AppEvent, IEvents } from "../base/Events";
 import { ensureElement } from "../../utils/utils";
 
 
 export interface ISuccessView {
   total: number;
 }
-
-export class SuccessView extends Component <ISuccessView> {
-  protected descriptionElement: HTMLElement;
-  protected closeButton: HTMLButtonElement;
-
-  constructor (container: HTMLElement, protected events: IEvents) {
-    super (container);
-
-    this.descriptionElement = ensureElement<HTMLElement> (".order-success__description", this.container);
-    this.closeButton = ensureElement<HTMLButtonElement> (".order-success__close", this.container);
-
-    this.closeButton.addEventListener("click", () => {
-      this.events.emit(AppEvent.SuccessClose);
-    });
-  
+interface ISuccessActions {
+    onClick: () => void;
 }
 
-//сеттер для суммы заказа
+export class Success extends Component<ISuccessView> {
+    protected _closeButton: HTMLButtonElement;
+    protected _totalElement: HTMLElement;
 
-set total (value: number) {
-  this.descriptionElement.textContent = `Списано ${value} синапсов`;
-}
+    constructor(container: HTMLElement, actions: ISuccessActions) {
+        super(container);
+        this._closeButton = ensureElement<HTMLButtonElement>('.button', container);
+        this._totalElement = ensureElement('.order-success__description', container);
+
+        if (actions?.onClick) {
+            this._closeButton.addEventListener('click', actions.onClick);
+        }
+    }
+
+    set total(value: number) {
+        this._totalElement.textContent = `Списано ${value} синапсов`;
+    }
 }

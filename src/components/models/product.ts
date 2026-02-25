@@ -1,55 +1,46 @@
 import { IProduct } from '../../types';
-import { AppEvent } from '../base/Events';
-import { IEvents } from '../base/Events';
-
-// Класс каталога товаров
+import { EventEmitter } from '../base/Events';
 
 export class Product {
- // Массив всех товаров каталога
   private items: IProduct[] = [];
-
-// Выбранный товар для детального отображения (может быть null)
-  private selectedItems: IProduct | null = null;
-//
   private selectedItem: IProduct | null = null;
-//
-  private events: IEvents;
+  private events: EventEmitter;
 
-  constructor(events: IEvents) {
+  constructor(events: EventEmitter) {
     this.events = events;
   }
-// Cохранение массива товаров полученного в параметрах метода
-setItems(items: IProduct[]): void {
-    this.items = items;
-    //эмит события
-    this.events.emit(AppEvent.CatalogChange, {items:this.items});
-}
 
-//Получение массива товаров из модели
-getItems(): IProduct[] {
+  setItems(items: IProduct[]): void {
+    this.items = items;
+    if (this.events) {
+      this.events.emit('catalog:change', { items: this.items });
+    }
+  }
+
+  getItems(): IProduct[] {
     return this.items;
   }
 
-// Получение одного товара по его id
-getItemsById(id: string): IProduct | undefined {
-    return this.items.find(product => product.id === id);
+  getItemById(id: string): IProduct | undefined {
+    const item = this.items.find(product => product.id === id);
+    if (!item) {
+      console.warn(`Товар с ID ${id} не найден в каталоге`);
+    }
+    return item;
   }
 
-  //Cохранение товара для подробного отображения
-  setSelectedItems(items: IProduct): void {
-    this.selectedItems = items;
-  }
-
-
-   // Установка выбранного товара (эмитит событие)
   setSelectedItem(item: IProduct): void {
+    if (!item || !item.id) {
+      console.error('Попытка установить некорректный выбранный товар:', item);
+      return;
+    }
     this.selectedItem = item;
-    this.events.emit(AppEvent.ProductSelect, { item: this.selectedItem });
+    if (this.events) {
+      this.events.emit('card:select', { item: this.selectedItem });
+    }
   }
 
-    //Получение товара для подробного отображения
-  getSelectedItems(): IProduct | null {
-    return this.selectedItems;
+  getSelectedItem(): IProduct | null {
+    return this.selectedItem;
   }
-
 }

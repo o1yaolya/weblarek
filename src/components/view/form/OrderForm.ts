@@ -1,143 +1,113 @@
 import { BaseForm } from "./BaseForm";
-import { ensureElement } from "../../../utils/utils";
-import { IEvents } from "../../base/Events";
+import { ensureAllElements, ensureElement } from "../../../utils/utils";
 
-export interface IOrderFormStep1Data {
-  paymentMethod: "card" | "cash";
-  address: string;
-  email?: string;   // опциональное поле
-  phone?: string;  // опциональное поле
+
+export interface IOrderFormStep1 {
+  onPaymentChange: (payment: string) => void;
+  onAddressChange: (address: string) => void;
+  Submit: () => void;
 }
 
 
-
-export interface IOrderFormStep1Events {
-  'form:submit': (data: IOrderFormStep1Data) => void;
-  'input:change': (field: keyof IOrderFormStep1Data, value: string) => void;
-}
-
-export class OrderForm extends BaseForm<IOrderFormStep1Data> {
-  protected cardButton: HTMLButtonElement;
-  protected cashButton: HTMLButtonElement;
+export class OrderForm extends BaseForm<IOrderFormStep1> {
+  protected paymentButton: HTMLButtonElement[];
   protected addressInput: HTMLInputElement;
+  protected submitButton: HTMLButtonElement;
+  protected errorsElement: HTMLElement;
 
-  constructor(container: HTMLElement, events: IEvents) {
-    super(container, events);
+  constructor(container: HTMLFormElement, actions?: IOrderFormStep1) {
+    super(container, actions);
+ 
 
-    try {
-      this.cardButton = ensureElement<HTMLButtonElement>(
-        'button[name="card"]',
-        this.container
-      );
-      this.cashButton = ensureElement<HTMLButtonElement>(
-        'button[name="cash"]',
-        this.container
-      );
+    this.paymentButton = ensureAllElements<HTMLButtonElement>(
+      '.button_alt',
+      container
+    );
 
-      this.addressInput = ensureElement<HTMLInputElement>(
-        'input[name="address"]',
-        this.container
-      );
+    this.addressInput = ensureElement<HTMLInputElement>(
+      'input[name="address"]', 
+      container);
 
-      // Исправленный селектор для кнопки отправки
-      this.submitButton = ensureElement<HTMLButtonElement>(
-        '.order__button', // или 'button[type="submit"]'
-        this.container
-      );
+    this.submitButton = ensureElement<HTMLButtonElement>(
+      'button[type="submit"]',
+       container);
 
-      // Вызываем настройку обработчиков после инициализации элементов
-      this.setupEventListeners();
-    } catch (error) {
-      console.error("Ошибка при инициализации OrderForm:", error);
-      throw error;
+    this.errorsElement = ensureElement('.form__errors', 
+      container); 
+
+    this.paymentButton.forEach(button => {
+  button.addEventListener('click', () => {
+    // Снимаем активный класс со всех кнопок
+    this.paymentButton.forEach(btn => btn.classList.remove('button_alt-active'));
+    
+    // Добавляем активный класс текущей кнопке
+    button.classList.add('button_alt-active');
+    
+    const paymentChange = button.getAttribute('name') || 'card';
+    if (actions?.onPaymentChange) {
+      actions.onPaymentChange(paymentChange);
     }
-  }
+    this.checkFormValidity();
+  });
+});
 
-  // === МЕТОД НАСТРОЙКИ ОБРАБОТЧИКОВ СОБЫТИЙ ===
- protected setupEventListeners(): void {
-  // Обработчик для кнопки отправки
-  if (this.submitButton) {
-    this.submitButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      const formData: IOrderFormStep1Data = {
-        paymentMethod: this.paymentMethod || 'card',
-        address: this.addressInput.value,
-      };
-      this.events.emit('form:submit', formData);
-    });
-  }
 
-  // Обработчики для кнопок способа оплаты
-  if (this.cardButton) {
-    this.cardButton.addEventListener('click', () => {
-      this.paymentMethod = 'card';
-      this.events.emit('payment:change', 'card');
-      this.validate(); // Добавляем проверку валидности при выборе способа оплаты
-    });
-  }
-  if (this.cashButton) {
-    this.cashButton.addEventListener('click', () => {
-      this.paymentMethod = 'cash';
-      this.events.emit('payment:change', 'cash');
-      this.validate(); // Добавляем проверку валидности при выборе способа оплаты
-    });
-  }
-
-  // Обработчик для ввода адреса
-  if (this.addressInput) {
     this.addressInput.addEventListener('input', () => {
-      this.events.emit('input:change', {
-        field: 'address',
-        value: this.addressInput.value,
-      });
-      this.validate(); // Перепроверяем валидность формы при каждом изменении адреса
+            if (actions?.onAddressChange) {
+                actions.onAddressChange(this.addressInput.value);
+            }
+              this.checkFormValidity(); // Проверяем валидность после ввода адреса
     });
-  }
-}
-
-
-  // Сеттер для визуального состояния кнопки оплаты
-  set paymentMethod(value: "card" | "cash" | null) {
-    if (value === "card") {
-      this.cardButton.classList.add("button_alt-active");
-      this.cashButton.classList.remove("button_alt-active");
-    } else if (value === "cash") {
-      this.cashButton.classList.add("button_alt-active");
-      this.cardButton.classList.remove("button_alt-active");
-    } else {
-      this.cardButton.classList.remove("button_alt-active");
-      this.cashButton.classList.remove("button_alt-active");
+        // Блокируем кнопку «Далее» при загрузке
+    this.setSubmitDisabled(true);
     }
+ // Метод проверки валидности формы
+  private checkFormValidity(): void {
+  const addressValid = this.addressInput.value.trim().length > 0;
+  const paymentValid = this.paymentButton.some(btn => btn.classList.contains('button_alt-active'));
+
+  // Формируем текст ошибок
+  let errorMessage = '';
+  if (!paymentValid) {
+    errorMessage += 'Выберите способ оплаты ';
   }
-  setFieldValue(field: keyof IOrderFormStep1Data, value: string): void {
-  switch (field) {
-    case 'address':
-      this.addressInput.value = value;
-      break;
-    case 'paymentMethod':
-      // Для paymentMethod обновляем визуальное состояние
-      this.paymentMethod = value as "card" | "cash" | null;
-      break;
+  if (!addressValid) {
+    errorMessage += 'Необходимо указать адрес ';
   }
-}
-public validate(): boolean { 
-  const paymentValid = this.paymentMethod !== null; 
-  const addressValid = this.addressInput.value.trim() !== '';
-  const isValid = paymentValid && addressValid; 
-  
-  if (this.submitButton) {
-  this.submitButton.disabled = !isValid;
-}
 
+  // Обновляем текст и видимость ошибок
+  this.errorsElement.textContent = errorMessage;
+  this.errorsElement.style.display = errorMessage.length > 0 ? 'block' : 'none';
 
-  if (!isValid) { 
-    this.showError("Необходимо указать адрес"); 
-  } else { 
-    this.clearError(); 
-  } 
-  return isValid; 
+  // Активируем/деактивируем кнопку «Далее»
+  this.setSubmitDisabled(!(addressValid && paymentValid));
 }
 
-}
+  // Устанавливает активный способ оплаты
+  setPayment(payment: string): void {
+    this.paymentButton.forEach(btn => {
+      btn.classList.toggle('button_alt-active', btn.getAttribute('name') === payment);
+    });
+    this.checkFormValidity();
+  }
 
+      set address(value: string) {
+        this.addressInput.value = value;
+      }
 
+      set payment (value: string) {
+        this.setPayment(value);
+      }
+
+      
+   // блокирует/разблокирует кнопку отправки
+   
+      setSubmitDisabled(value: boolean) {
+        this.submitButton.disabled = value;
+      }
+
+       render(): HTMLElement {
+        return this.container;
+    }
+
+  }

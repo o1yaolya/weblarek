@@ -1,126 +1,97 @@
 import { BaseForm } from './BaseForm';
-import { AppEvent, IEvents } from '../../base/Events';
 import { ensureElement } from '../../../utils/utils';
 
-// Тип данных формы
-interface ContactsFormData {
-  email: string;
-  phone: string;
+export interface IOrderFormStep2 {
+  onEmailChange: (payment: string) => void;
+  onPhoneChange: (address: string) => void;
+  Submit: () => void;
 }
 
-export class ContactsForm extends BaseForm<ContactsFormData> {
-  public emailInput: HTMLInputElement;
-  public phoneInput: HTMLInputElement;
-  private payButton: HTMLButtonElement | null = null;
-  private onPaymentSubmit: (() => void) | null = null;
+export class ContactsForm extends BaseForm<IOrderFormStep2> {
+  protected emailInput: HTMLInputElement;
+  protected phoneInput: HTMLInputElement;
+  protected payButton: HTMLButtonElement;
+  protected errorsElement: HTMLElement;
 
-  constructor(container: HTMLElement, events: IEvents) {
-    super(container, events);
+  constructor(container: HTMLFormElement, actions?:IOrderFormStep2) {
+    super(container, actions);
 
     // Инициализация полей
-    this.emailInput = ensureElement<HTMLInputElement>('input[name="email"]', container);
-    this.phoneInput = ensureElement<HTMLInputElement>('input[name="phone"]', container);
+    this.emailInput = ensureElement<HTMLInputElement>(
+      'input[name="email"]', 
+      container);
 
-    // Ищем кнопку оплаты — используем более точный селектор
-    this.payButton = ensureElement<HTMLButtonElement>('.button', container);
+    this.phoneInput = ensureElement<HTMLInputElement>(
+      'input[name="phone"]',
+       container);
 
-    // Добавляем обработчики валидации
-    this.phoneInput.addEventListener('input', () => this.validateForm());
-    this.emailInput.addEventListener('input', () => this.validateForm());
+    this.payButton = ensureElement<HTMLButtonElement>(
+      'button[type="submit"]', 
+      container);
 
-    // Инициализируем состояние кнопки
-    this.validateForm();
-  }
+        this.errorsElement = ensureElement(
+      '.form__errors',
+      container);
 
-  public validateForm(): void {
-    const isEmailValid = this.validateEmail(this.emailInput.value);
-    const isPhoneValid = this.validatePhone(this.phoneInput.value);
-    const isFormValid = isEmailValid && isPhoneValid;
 
-    // Эмитим событие валидации для презентера
-    this.events.emit(AppEvent.FormValidation, isFormValid);
 
-    // Обновляем состояние кнопки оплаты
-    if (this.payButton) {
-      this.payButton.disabled = !isFormValid;
-      this.payButton.classList.toggle('button_disabled', !isFormValid);
+
+    this.emailInput.addEventListener('input', () => {
+            if (actions?.onEmailChange) {
+                actions.onEmailChange(this.emailInput.value);
+            }
+              this.checkFormValidity(); // Проверяем валидность после ввода почты 
+    });
+
+     this.phoneInput.addEventListener('input', () => {
+            if (actions?.onPhoneChange) {
+                actions.onPhoneChange(this.phoneInput.value);
+            }
+            this.checkFormValidity(); // Проверяем валидность после ввода
+        });
+        // Блокируем кнопку «Далее» при загрузке
+    this.setSubmitDisabled(true);
     }
+ // Метод проверки валидности формы
+  private checkFormValidity(): void {
+  const emailValid = this.emailInput.value.trim().length > 0;
+  const phoneValid = this.phoneInput.value.trim().length > 0;
 
-    // Отображение ошибок
-    if (!isFormValid) {
-      this.showError('Заполните все поля корректно');
-    } else {
-      this.clearError();
+
+  // Формируем текст ошибок
+  let errorMessage = '';
+  if (!emailValid) {
+    errorMessage += 'Укажите почту ';
+  }
+  if (!phoneValid) {
+    errorMessage += 'Укажите телефон ';
+  }
+
+  // Обновляем текст и видимость ошибок
+  this.errorsElement.textContent = errorMessage;
+  this.errorsElement.style.display = errorMessage.length > 0 ? 'block' : 'none';
+
+  // Активируем/деактивируем кнопку «Оплатить»
+  this.setSubmitDisabled(!(emailValid && phoneValid));
+}
+
+
+      set email(value: string) {
+        this.emailInput.value = value;
+      }
+
+      set phone (value: string) {
+        this.phoneInput.value = value;
+      }
+
+      
+   // блокирует/разблокирует кнопку отправки
+   
+      setSubmitDisabled(value: boolean) {
+        this.submitButton.disabled = value;
+      }
+
+       render(): HTMLElement {
+        return this.container;
     }
-
-    console.log('Валидация выполнена:', { isEmailValid, isPhoneValid, isFormValid });
-  }
-
-  getData(): ContactsFormData {
-    return {
-      email: this.emailInput.value.trim(),
-      phone: this.phoneInput.value.trim()
-    };
-  }
-
-  /**
-   * Инициализирует кнопку оплаты и её обработчик
-   */
-  initPaymentButton(onSubmit: () => void): void {
-    this.onPaymentSubmit = onSubmit;
-
-    if (!this.payButton) {
-      console.warn('Кнопка оплаты не найдена в шаблоне формы контактов');
-      return;
-    }
-
-    // Удаляем предыдущий обработчик, если есть
-    this.payButton.removeEventListener('click', this.handlePaymentClick);
-
-    // Устанавливаем новый обработчик
-    this.payButton.addEventListener('click', this.handlePaymentClick.bind(this));
-
-    // Сразу проверяем валидность при инициализации кнопки
-    this.validateForm();
-  }
-
-  // Обработчик клика кнопки оплаты
-  private handlePaymentClick(e: MouseEvent): void {
-    e.preventDefault();
-    if (this.onPaymentSubmit) {
-      this.onPaymentSubmit();
-    }
-  }
-
-  public validateEmail(email: string): boolean {
-    // Базовая валидация email
-    if (!email || email.trim().length === 0) return false;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
-  }
-
-  public validatePhone(phone: string): boolean {
-    if (!phone || phone.trim().length === 0) return false;
-    // Убираем все нецифровые символы и проверяем длину
-    const digits = phone.replace(/\D/g, '');
-    return digits.length >= 10;
-  }
-
-  public setContainer(container: HTMLElement): void {
-    // Переинициализируем элементы
-
-    this.emailInput = ensureElement<HTMLInputElement>('input[name="email"]', container);
-    this.phoneInput = ensureElement<HTMLInputElement>('input[name="phone"]', container);
-    this.payButton = ensureElement<HTMLButtonElement>('.button', container);
-
-    // Восстанавливаем обработчики событий
-    this.phoneInput.removeEventListener('input', this.validateForm);
-    this.emailInput.removeEventListener('input', this.validateForm);
-
-    this.phoneInput.addEventListener('input', () => this.validateForm());
-    this.emailInput.addEventListener('input', () => this.validateForm());
-
-    // Обновляем валидацию после смены контейнера
-    this.validateForm();
-  }
 }
