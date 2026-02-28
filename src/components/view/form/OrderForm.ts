@@ -12,8 +12,6 @@ export interface IOrderFormStep1 {
 export class OrderForm extends BaseForm<IOrderFormStep1> {
   protected paymentButton: HTMLButtonElement[];
   protected addressInput: HTMLInputElement;
-  protected submitButton: HTMLButtonElement;
-  protected errorsElement: HTMLElement;
 
   constructor(container: HTMLFormElement, actions?: IOrderFormStep1) {
     super(container, actions);
@@ -27,68 +25,40 @@ export class OrderForm extends BaseForm<IOrderFormStep1> {
     this.addressInput = ensureElement<HTMLInputElement>(
       'input[name="address"]', 
       container);
+    
+    this.errorsElement = ensureElement('.form__errors',  
+      container);  
 
-    this.submitButton = ensureElement<HTMLButtonElement>(
-      'button[type="submit"]',
-       container);
-
-    this.errorsElement = ensureElement('.form__errors', 
-      container); 
+     this.submitButton = ensureElement<HTMLButtonElement>('button[type="submit"]', container);
 
     this.paymentButton.forEach(button => {
   button.addEventListener('click', () => {
-    // Снимаем активный класс со всех кнопок
-    this.paymentButton.forEach(btn => btn.classList.remove('button_alt-active'));
-    
-    // Добавляем активный класс текущей кнопке
-    button.classList.add('button_alt-active');
     
     const paymentChange = button.getAttribute('name') || 'card';
     if (actions?.onPaymentChange) {
       actions.onPaymentChange(paymentChange);
     }
-    this.checkFormValidity();
   });
 });
-
 
     this.addressInput.addEventListener('input', () => {
             if (actions?.onAddressChange) {
                 actions.onAddressChange(this.addressInput.value);
             }
-              this.checkFormValidity(); // Проверяем валидность после ввода адреса
     });
-        // Блокируем кнопку «Далее» при загрузке
-    this.setSubmitDisabled(true);
-    }
- // Метод проверки валидности формы
-  private checkFormValidity(): void {
-  const addressValid = this.addressInput.value.trim().length > 0;
-  const paymentValid = this.paymentButton.some(btn => btn.classList.contains('button_alt-active'));
-
-  // Формируем текст ошибок
-  let errorMessage = '';
-  if (!paymentValid) {
-    errorMessage += 'Выберите способ оплаты ';
+     this.submitButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (actions?.Submit) {
+        actions.Submit();
+      }
+    });   
   }
-  if (!addressValid) {
-    errorMessage += 'Необходимо указать адрес ';
-  }
-
-  // Обновляем текст и видимость ошибок
-  this.errorsElement.textContent = errorMessage;
-  this.errorsElement.style.display = errorMessage.length > 0 ? 'block' : 'none';
-
-  // Активируем/деактивируем кнопку «Далее»
-  this.setSubmitDisabled(!(addressValid && paymentValid));
-}
-
+ 
   // Устанавливает активный способ оплаты
   setPayment(payment: string): void {
     this.paymentButton.forEach(btn => {
       btn.classList.toggle('button_alt-active', btn.getAttribute('name') === payment);
     });
-    this.checkFormValidity();
   }
 
       set address(value: string) {
@@ -99,15 +69,26 @@ export class OrderForm extends BaseForm<IOrderFormStep1> {
         this.setPayment(value);
       }
 
-      
-   // блокирует/разблокирует кнопку отправки
-   
-      setSubmitDisabled(value: boolean) {
-        this.submitButton.disabled = value;
-      }
 
+   // Отображает ошибки валидации
+  
+  setValidationErrors(errors: { payment?: string; address?: string }) {
+    
+    this.errorsElement.innerHTML = '';
+    const errorMessages = [];
+
+    if (errors.payment) errorMessages.push(errors.payment);
+    if (errors.address) errorMessages.push(errors.address);
+  if (errorMessages.length > 0) {
+            this.errorsElement.textContent = errorMessages.join(', ');
+        } else {
+            this.errorsElement.textContent = '';
+        }
+    }
+    setSubmitDisbled(disabled: boolean): void {
+  this.submitButton.disabled = disabled;
+}
        render(): HTMLElement {
         return this.container;
     }
-
   }

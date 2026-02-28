@@ -2,16 +2,14 @@ import { BaseForm } from './BaseForm';
 import { ensureElement } from '../../../utils/utils';
 
 export interface IOrderFormStep2 {
-  onEmailChange: (payment: string) => void;
-  onPhoneChange: (address: string) => void;
+  onEmailChange: (email: string) => void;
+  onPhoneChange: (phone: string) => void;
   Submit: () => void;
 }
 
 export class ContactsForm extends BaseForm<IOrderFormStep2> {
   protected emailInput: HTMLInputElement;
   protected phoneInput: HTMLInputElement;
-  protected payButton: HTMLButtonElement;
-  protected errorsElement: HTMLElement;
 
   constructor(container: HTMLFormElement, actions?:IOrderFormStep2) {
     super(container, actions);
@@ -25,56 +23,30 @@ export class ContactsForm extends BaseForm<IOrderFormStep2> {
       'input[name="phone"]',
        container);
 
-    this.payButton = ensureElement<HTMLButtonElement>(
-      'button[type="submit"]', 
-      container);
+       // Инициализация элементов для ошибок и кнопки отправки
+    this.errorsElement = ensureElement('.form__errors',  
+      container);  
 
-        this.errorsElement = ensureElement(
-      '.form__errors',
-      container);
-
-
-
+     this.submitButton = ensureElement<HTMLButtonElement>('button[type="submit"]', container);
 
     this.emailInput.addEventListener('input', () => {
             if (actions?.onEmailChange) {
                 actions.onEmailChange(this.emailInput.value);
             }
-              this.checkFormValidity(); // Проверяем валидность после ввода почты 
     });
 
      this.phoneInput.addEventListener('input', () => {
             if (actions?.onPhoneChange) {
                 actions.onPhoneChange(this.phoneInput.value);
             }
-            this.checkFormValidity(); // Проверяем валидность после ввода
         });
-        // Блокируем кнопку «Далее» при загрузке
-    this.setSubmitDisabled(true);
+        this.submitButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (actions?.Submit) {
+        actions.Submit();
+      }
+    });  
     }
- // Метод проверки валидности формы
-  private checkFormValidity(): void {
-  const emailValid = this.emailInput.value.trim().length > 0;
-  const phoneValid = this.phoneInput.value.trim().length > 0;
-
-
-  // Формируем текст ошибок
-  let errorMessage = '';
-  if (!emailValid) {
-    errorMessage += 'Укажите почту ';
-  }
-  if (!phoneValid) {
-    errorMessage += 'Укажите телефон ';
-  }
-
-  // Обновляем текст и видимость ошибок
-  this.errorsElement.textContent = errorMessage;
-  this.errorsElement.style.display = errorMessage.length > 0 ? 'block' : 'none';
-
-  // Активируем/деактивируем кнопку «Оплатить»
-  this.setSubmitDisabled(!(emailValid && phoneValid));
-}
-
 
       set email(value: string) {
         this.emailInput.value = value;
@@ -87,11 +59,24 @@ export class ContactsForm extends BaseForm<IOrderFormStep2> {
       
    // блокирует/разблокирует кнопку отправки
    
-      setSubmitDisabled(value: boolean) {
-        this.submitButton.disabled = value;
-      }
+     setErrors(errors: { email?: string; phone?: string }) {
+       this.errorsElement.innerHTML = '';
+    const errorMessages = [];
 
-       render(): HTMLElement {
+    if (errors.email) errorMessages.push(errors.email);
+    if (errors.phone) errorMessages.push(errors.phone);
+  if (errorMessages.length > 0) {
+            this.errorsElement.textContent = errorMessages.join(', ');
+        } else {
+            this.errorsElement.textContent = '';
+        }
+    }
+
+    setSubmitDisabled(disabled: boolean) {
+        this.submitButton.disabled = disabled;
+    }
+
+    render(): HTMLElement {
         return this.container;
     }
-}
+  }

@@ -1,11 +1,17 @@
 import { IProduct } from '../../types';
+import { EventEmitter } from '../base/Events';
 
 //Класс корзины
 export class Basket {
 
 // Массив товаров, выбранных покупателем для покупки
   private items: IProduct[] = [];
+  private events:EventEmitter;
 
+
+   constructor(events: EventEmitter) {
+    this.events = events;
+  }
 // Получение массива товаров, которые находятся в корзине
   getItems(): IProduct[] {
     return this.items;
@@ -14,6 +20,7 @@ export class Basket {
 // Добавление товара, который был получен в параметре, в массив корзины
 addItem(items: IProduct): void {
     this.items.push(items);
+    this.events.emit('basket:changed'); // Эмиссия события об изменении
   }
 
  // Удаление товара, полученного в параметре из массива корзины
@@ -29,11 +36,13 @@ addItem(items: IProduct): void {
     } else {
       console.warn('[Basket.deleteItem] Товар не найден:', id);
     }
+    this.events.emit('basket:changed'); // Эмиссия события об изменении
   }
 
   // Очистка корзины
   clear(): void {
     this.items = [];
+    this.events.emit('basket:changed'); // Эмиссия события об изменении
   }
 
   // Получение стоимости всех товаров в корзине

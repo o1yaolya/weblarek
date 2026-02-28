@@ -35,8 +35,8 @@ const serverApi = new ServerApi(api);
 // Модели
 
 const productsModel = new Product(events);
-const basketModel = new Basket();
-const buyerModel = new Buyer();
+const basketModel = new Basket(events);
+const buyerModel = new Buyer(events);
 
 
 basketModel.loadFromStorage();
@@ -56,7 +56,28 @@ const header = new Header(ensureElement('.header'), {
 });
 const modal = new Modal(ensureElement(".modal"), events);
 
+// Инициализируем формы один раз при старте приложения
 
+const orderForm = new OrderForm(cloneTemplate<HTMLFormElement>('#order'),
+  {
+    onPaymentChange: (payment: string) => events.emit('order:payment', { payment }),
+    onAddressChange: (address: string) => events.emit('order:address', { address }),
+    Submit: () => events.emit('order:step2')
+  }
+);
+
+const contactsForm = new ContactsForm(cloneTemplate('#contacts'),
+  {
+    onEmailChange: (email: string) => events.emit('contacts:email', { email }),
+    onPhoneChange: (phone: string) => events.emit('contacts:phone', { phone }),
+    Submit: () => events.emit('contacts:submit')
+  }
+);
+
+// Инициализируем SuccessView один раз при старте приложения
+const successView = new Success(cloneTemplate('#success'), {
+  onClick: () => modal.close()
+});
 
 // === РЕНДЕРИНГ КАТАЛОГА ===
 
@@ -138,25 +159,21 @@ events.on('basket:add', (product: IProduct) => {
     basketModel.addItem(product);
   }
   modal.close();
-  events.emit('basket:changed');
 });
 
 
 
-//=== УПРАВЛЕНИЕ КОРЗИНОЙ ===
+// === УПРАВЛЕНИЕ КОРЗИНОЙ ===
 
-// обновление счетчика корзины
+// обновление счётчика корзины
 events.on('basket:changed', () => {
   const count = basketModel.getItems();
+
   header.counter = count.length;
+
   if (count.length === 0) {
     basket.total = 0;
     basket.items = [];
-    const emptyMessage = document.createElement('div');
-    emptyMessage.className = 'basket__empty';
-    emptyMessage.textContent = 'Корзина пуста';
-
-
   } else {
     const cards = count.map((item, index) => {
       const card = new BasketCard(
@@ -170,56 +187,22 @@ events.on('basket:changed', () => {
     });
     basket.items = cards;
     basket.total = basketModel.getTotalPrice();
-
   }
-  console.log(`Обновлён счётчик корзины: ${count.length} товаров`);
 
+  console.log(`Обновлён счётчик корзины: ${count.length} товаров`);
 });
 
-// Открытие корзины
 
+// Открытие корзины
 events.on("basket:open", () => {
   // Проверяем, что корзина инициализирована
   if (!basket) {
     console.error('BasketView не инициализирован');
     return;
   }
-
-  // Обновляем содержимое корзины перед открытием
-  const items = basketModel.getItems();
-  if (items.length === 0) {
-    basket.total = 0;
-    basket.items = [];
-  } else {
-    const cards = items.map((item, index) => {
-      const card = new BasketCard(
-        cloneTemplate('#card-basket'),
-        { onClick: () => events.emit('basket:remove', item) }
-      );
-      card.title = item.title;
-      card.price = item.price;
-      card.index = index + 1;
-      return card.render();
-    });
-    basket.items = cards;
-    basket.total = basketModel.getTotalPrice();
-  }
-
-  // Получаем отрендеренный контент корзины
-  const basketContent = basket.render();
-  if (!basketContent) {
-    console.error('Корзина не смогла отрендериться');
-    return;
-  }
-
-  // Закрываем текущее модальное окно (если открыто)
-  modal.close();
-
-  // Устанавливаем содержимое и открываем
-  modal.content = basketContent;
+  modal.content = basket.render();
+  // Просто открываем корзину — содержимое уже обновлено через basket:changed
   modal.show();
-
-  console.log('Корзина открыта. Товаров:', items.length);
 });
 
 // нажатие на значок корзины в корзине - удалить товар
@@ -243,18 +226,6 @@ events.on('basket:remove', (product: IProduct) => {
 
 // нажатие кнопки "оформить" 1 шаг -  способ оплаты и адрес
 events.on('basket:order', () => {
-  const formTemplate = cloneTemplate('#order');
-  if (!formTemplate) {
-    console.error('Шаблон #order не найден');
-    return;
-  }
-
-  const orderForm = new OrderForm(formTemplate as HTMLFormElement, {
-    onPaymentChange: (payment: string) => events.emit('order:payment', { payment }),
-    onAddressChange: (address: string) => events.emit('order:address', { address }),
-    Submit: () => events.emit('order:step2') // Переход ко 2-му шагу
-  });
-
   modal.content = orderForm.render();
   modal.show();
 });
@@ -262,25 +233,36 @@ events.on('basket:order', () => {
 
 // Переход ко второй форме - контакты - почта и телефон
 events.on('order:step2', () => {
-  const contactTemplate = cloneTemplate('#contacts');
-  if (!contactTemplate) {
-    console.error('Шаблон #contacts не найден');
-    return;
-  }
-
-  const contactsForm = new ContactsForm(contactTemplate as HTMLFormElement, {
-    onEmailChange: (email: string) => events.emit('order:email', { email }),
-    onPhoneChange: (phone: string) => events.emit('order:phone', { phone }),
-    Submit: () => events.emit('order:finalize') // Финальный шаг — оплата
-  });
-
   modal.content = contactsForm.render();
   modal.show();
 });
 
 
+// При изменении покупателя - вызываем валидацию 
+events.on('buyer:changed', () => {
+  const errors = buyerModel.validate();
+
+  const orderErrors = {
+    payment: errors.payment,
+    address: errors.address
+  };
+  const orderHasErrors = !!(orderErrors.payment || orderErrors.address);
+  orderForm.setValidationErrors(orderErrors);
+  // Кнопка отключена, если есть ошибки
+  orderForm.setSubmitDisbled(orderHasErrors);
+
+  const contactsErrors = {
+    email: errors.email,
+    phone: errors.phone
+  };
+  const contactsHasErrors = !!(contactsErrors.email || contactsErrors.phone);
+  contactsForm.setErrors(contactsErrors);
+  // Кнопка отключена, если есть ошибки
+  contactsForm.setSubmitDisabled(contactsHasErrors);
+});
+
 // Переход к отправке заказа на сервер
-events.on('order:finalize', () => {
+events.on('contacts:submit', () => {
   const buyerData = buyerModel.getData();
   const basketItems = basketModel.getItems();
 
@@ -321,15 +303,10 @@ events.on('order:finalize', () => {
   serverApi.order(orderData)
     .then(response => {
       console.log('Заказ создан:', response);
-      const successView = new Success(cloneTemplate('#success'), {
-        onClick: () => modal.close()
-      });
-      successView.total = orderData.total;
+      successView.total = response.total;
       modal.content = successView.render();
       basketModel.clear();
 
-      // Обновляем счётчик в заголовке
-      header.counter = 0; // Явно устанавливаем 0
     })
     .catch((error) => {
       console.error('Полный ответ сервера:', error.response?.data);
@@ -343,20 +320,22 @@ events.on('order:finalize', () => {
 // Подписка на события форм для сохранения данных в модель Buyer
 events.on('order:payment', (data: { payment: TPayment }) => {
   buyerModel.setPayment(data.payment);
+  orderForm.payment = data.payment;
   console.log('Payment сохранён:', data.payment);
 });
 
 events.on('order:address', (data: { address: string }) => {
   buyerModel.setAddress(data.address);
+   orderForm.address = data.address;
   console.log('Address сохранён:', data.address);
 });
 
-events.on('order:email', (data: { email: string }) => {
+events.on('contacts:email', (data: { email: string }) => {
   buyerModel.setEmail(data.email);
   console.log('Email сохранён:', data.email);
 });
 
-events.on('order:phone', (data: { phone: string }) => {
+events.on('contacts:phone', (data: { phone: string }) => {
   buyerModel.setPhone(data.phone);
   console.log('Phone сохранён:', data.phone);
 });

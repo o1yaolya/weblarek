@@ -12,7 +12,7 @@ export class Card<T> extends Component<T & TCard> {
   
 
   // Конструктор класса Card
-  constructor(container: HTMLElement, actions?: { onClick: () => void }) {
+  constructor(container: HTMLElement) {
     super(container);
 
     // Находим и сохраняем ключевые элементы карточки
@@ -24,13 +24,7 @@ export class Card<T> extends Component<T & TCard> {
       '.card__price',
       this.container
     );
-  
-
-    if (actions?.onClick) {
-      container.addEventListener('click', actions.onClick);
-    }
   }
-
   get element(): HTMLElement {
     return this.container;
   }
